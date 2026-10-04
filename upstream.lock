@@ -1,0 +1,11 @@
+{
+  "repository": "https://github.com/zai-org/ZCode",
+  "inspected_commit": "29628c9acdb81b703bbd4080c207a0e7ce5e276e",
+  "documented_version": "3.14.3",
+  "inspected_web_entry": "packages/web/src/main.tsx",
+  "documentation": "https://zcode.z.ai/en/docs/remote-control",
+  "adapter": "hosted-upstream-page",
+  "bundled_upstream_code": false,
+  "wire_protocol_implemented": false,
+  "note": "Inspection baseline, not a runtime pin: the remote host serves its own UI. Desktop AppImage 3.11.2 compatibility is not yet device-tested."
+}

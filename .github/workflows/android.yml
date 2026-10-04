@@ -1,0 +1,62 @@
+name: Android Remote
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', 'tests/**', 'scripts/**', '.github/workflows/android.yml']
+  pull_request:
+    paths: ['android/**', 'tests/**', 'scripts/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Record source revision
+        id: source
+        run: printf 'commit=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Dependency-free core checks
+        run: bash scripts/test-core.sh
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Install compile SDK
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Unit tests, lint and debug APK
+        run: gradle -p android --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+      - name: Record build provenance
+        run: |
+          mkdir -p android/app/build/provenance
+          git rev-parse HEAD > android/app/build/provenance/commit.txt
+          sha256sum android/app/build/outputs/apk/debug/app-debug.apk > android/app/build/provenance/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zcode-remote-debug-${{ steps.source.outputs.commit }}
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/provenance/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-reports-${{ steps.source.outputs.commit }}
+          path: android/app/build/reports/
+          if-no-files-found: ignore
+          retention-days: 14
